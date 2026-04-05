@@ -1,0 +1,156 @@
+id: ast-to-springboot
+name: AST to Spring Boot Code Generation Skill
+version: 1.0.0
+description: >
+  AST構造からSpring Bootのレイヤー構造（Controller / Service / Repository / Entity）
+  に基づくJavaコードを生成するスキル。COBOL資産のモダナイズにも対応。
+
+target:
+  framework: Spring Boot
+  language: Java
+  version: 17+
+
+input:
+  type: json
+  required: true
+  description: AST構造データ（COBOLまたは業務ロジック）
+
+architecture:
+  layers:
+    - controller
+    - service
+    - repository
+    - entity
+
+  package_structure: |
+    src.main.nsj.project
+     ├─ controller
+     ├─ service
+     ├─ repository
+     ├─ entity
+     ├─ dto
+     ├─ config
+     ├─ exception
+     ├─ util
+     └─ Application.java 
+    src.main.resources
+     └─ mapper
+
+naming_convention:
+  entity: "{name}Entity"
+  repository: "{name}Repository"
+  service: "{name}Service"
+  controller: "{name}Controller"
+
+transformation_rules:
+
+  control_flow:
+    program: service_class
+    function: service_method
+    paragraph: private_method
+    perform: method_call
+    perform_thru: sequential_method_calls
+    if: if_statement
+    evaluate: switch_statement
+    loop: loop_statement
+
+  data_mapping:
+    working_storage: dto
+    db_table: entity
+    constant: static_final
+
+  io_handling:
+    file_io: service_layer
+    db_access: repository_layer
+
+  transaction:
+    commit_unit: service_method
+    annotation: "@Transactional"
+    read_only: true_for_select
+
+cobol_specific_rules:
+  enabled: true
+  rules:
+    - "PERFORM → Serviceメソッド呼び出し"
+    - "PARAGRAPH → privateメソッド"
+    - "WORKING-STORAGE → DTO"
+    - "DB項目 → Entity"
+    - "FILE操作 → Service層"
+    - "COMMIT/ROLLBACK → @Transactional"
+
+output:
+  format: java
+  structure: multi_file
+  constraints:
+    - one_class_per_file
+    - include_package_declaration
+    - include_imports
+    - compilable_code_only
+    - no_explanations
+
+quality_rules:
+  - null_check_required
+  - exception_handling_required
+  - use_runtime_exception
+  - logging_required
+  - separation_of_concerns
+
+logging:
+  framework: slf4j
+  required: true
+
+dependency_injection:
+  type: constructor_injection
+
+transaction_management:
+  apply_on: service_layer
+  read_only_for_query: true
+
+options:
+  persistence:
+    type: [jpa, mybatis]
+    default: mybatis
+
+  batch_processing:
+    enabled: true
+    chunk_size: configurable
+
+  dto_separation:
+    enabled: true
+
+  naming_customization:
+    enabled: true
+
+extensions:
+  - name: mybatis_support
+    description: SQLをXMLに分離し、複雑SQLに対応
+
+  - name: batch_support
+    description: 大量データ処理対応（chunk処理）
+
+  - name: api_generation
+    description: REST API Controller生成
+
+usage:
+
+  prompt_template: |
+    [LOAD_SKILL: ast-to-springboot]
+
+    追加要件:
+    {custom_requirements}
+
+    入力AST:
+    {ast_json}
+
+examples:
+
+  basic:
+    custom_requirements: |
+      ・標準CRUDを生成
+      ・JPAを使用
+
+  advanced:
+    custom_requirements: |
+      ・MyBatisを使用
+      ・複雑SQL対応
+      ・バッチ処理あり

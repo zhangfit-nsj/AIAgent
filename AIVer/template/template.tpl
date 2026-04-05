@@ -1,0 +1,41 @@
+【処理名】
+ORDERPROC
+
+【入力】
+ファイル入力あり
+
+【出力】
+なし
+
+【処理概要】
+条件判定を伴うデータ処理を行う
+
+【処理フロー】
+1. INIT-PROCESS を実行
+2. READ-ORDER を実行
+3. UNTIL を実行
+4. PROCESS-ORDER を実行
+5. READ-ORDER を実行
+6. END-PROCESS を実行
+7. FIND-CUSTOMER を実行
+8. CHECK-VIP を実行
+9. CALC-TOTAL を実行
+10. OUTPUT-ORDER を実行
+11. IF CU-TYPE = "VIP"
+
+【業務ルール】
+・CU-TYPE = "VIP" の条件で分岐
+
+【外部呼び出し】
+PROCESS-ORDER
+INIT-PROCESS
+UNTIL
+READ-ORDER
+CHECK-VIP
+END-PROCESS
+FIND-CUSTOMER
+CALC-TOTAL
+OUTPUT-ORDER
+
+【例外処理】
+未定義（要補完）

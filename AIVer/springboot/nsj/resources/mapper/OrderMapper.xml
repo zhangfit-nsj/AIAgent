@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="nsj.project.repository.OrderRepository">
+    <resultMap id="OrderResultMap" type="nsj.project.entity.OrderEntity">
+        <id property="orId" column="or_id"/>
+        <result property="orCustomerId" column="or_customer_id"/>
+        <result property="orAmount" column="or_amount"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="OrderResultMap">
+        SELECT or_id, or_customer_id, or_amount FROM orders WHERE or_id = #{orId}
+    </select>
+
+    <select id="selectAll" resultMap="OrderResultMap">
+        SELECT or_id, or_customer_id, or_amount FROM orders
+    </select>
+
+    <insert id="insert" parameterType="nsj.project.entity.OrderEntity">
+        INSERT INTO orders (or_id, or_customer_id, or_amount)
+        VALUES (#{orId}, #{orCustomerId}, #{orAmount})
+    </insert>
+
+    <update id="update" parameterType="nsj.project.entity.OrderEntity">
+        UPDATE orders
+        SET or_customer_id = #{orCustomerId}, or_amount = #{orAmount}
+        WHERE or_id = #{orId}
+    </update>
+
+    <delete id="delete" parameterType="long">
+        DELETE FROM orders WHERE or_id = #{orId}
+    </delete>
+</mapper>

@@ -1,0 +1,179 @@
+{
+  "program_id": "ORDERPROC",
+  "variables": [
+    {
+      "level": "05",
+      "name": "OR-ID",
+      "pic": "9("
+    },
+    {
+      "level": "05",
+      "name": "OR-CUSTOMER-ID",
+      "pic": "9("
+    },
+    {
+      "level": "05",
+      "name": "OR-AMOUNT",
+      "pic": "9("
+    },
+    {
+      "level": "05",
+      "name": "CU-ID",
+      "pic": "9("
+    },
+    {
+      "level": "05",
+      "name": "CU-NAME",
+      "pic": "X("
+    },
+    {
+      "level": "05",
+      "name": "CU-TYPE",
+      "pic": "X("
+    },
+    {
+      "level": "01",
+      "name": "WS-END-FLAG",
+      "pic": "X"
+    },
+    {
+      "level": "01",
+      "name": "WS-COUNT",
+      "pic": "9("
+    },
+    {
+      "level": "01",
+      "name": "WS-TOTAL",
+      "pic": "9("
+    },
+    {
+      "level": "01",
+      "name": "WS-CURRENT-CUSTOMER",
+      "pic": "9("
+    },
+    {
+      "level": "01",
+      "name": "WS-VIP-FLAG",
+      "pic": "X"
+    },
+    {
+      "level": "01",
+      "name": "WS-TEMP-VAR-1",
+      "pic": "X("
+    },
+    {
+      "level": "01",
+      "name": "WS-TEMP-VAR-2",
+      "pic": "X("
+    },
+    {
+      "level": "01",
+      "name": "WS-TEMP-VAR-3",
+      "pic": "X("
+    },
+    {
+      "level": "01",
+      "name": "WS-TEMP-VAR-4",
+      "pic": "X("
+    },
+    {
+      "level": "01",
+      "name": "WS-TEMP-VAR-5",
+      "pic": "X("
+    }
+  ],
+  "procedures": [
+    "FILE-CONTROL",
+    "MAIN-PROCESS",
+    "INIT-PROCESS",
+    "READ-ORDER",
+    "END-READ",
+    "PROCESS-ORDER",
+    "FIND-CUSTOMER",
+    "END-READ",
+    "CHECK-VIP",
+    "END-IF",
+    "CALC-TOTAL",
+    "OUTPUT-ORDER",
+    "END-PROCESS",
+    "EXTRA-PROC-001",
+    "EXTRA-PROC-002",
+    "EXTRA-PROC-003",
+    "EXTRA-PROC-004",
+    "EXTRA-PROC-005"
+  ],
+  "calls": [
+    {
+      "type": "PERFORM",
+      "target": "INIT-PROCESS"
+    },
+    {
+      "type": "PERFORM",
+      "target": "READ-ORDER"
+    },
+    {
+      "type": "PERFORM",
+      "target": "UNTIL"
+    },
+    {
+      "type": "PERFORM",
+      "target": "PROCESS-ORDER"
+    },
+    {
+      "type": "PERFORM",
+      "target": "READ-ORDER"
+    },
+    {
+      "type": "PERFORM",
+      "target": "END-PROCESS"
+    },
+    {
+      "type": "PERFORM",
+      "target": "FIND-CUSTOMER"
+    },
+    {
+      "type": "PERFORM",
+      "target": "CHECK-VIP"
+    },
+    {
+      "type": "PERFORM",
+      "target": "CALC-TOTAL"
+    },
+    {
+      "type": "PERFORM",
+      "target": "OUTPUT-ORDER"
+    }
+  ],
+  "conditions": [
+    "CU-TYPE = \"VIP\""
+  ],
+  "loops": [
+    "WS-END-FLAG = 'Y'"
+  ],
+  "file_io": [
+    {
+      "operation": "OPEN",
+      "target": "INPUT"
+    },
+    {
+      "operation": "OPEN",
+      "target": "INPUT"
+    },
+    {
+      "operation": "READ",
+      "target": "ORDER-FILE"
+    },
+    {
+      "operation": "READ",
+      "target": "CUSTOMER-FILE"
+    },
+    {
+      "operation": "CLOSE",
+      "target": "ORDER-FILE"
+    },
+    {
+      "operation": "CLOSE",
+      "target": "CUSTOMER-FILE"
+    }
+  ]
+}
