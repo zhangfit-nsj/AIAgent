@@ -34,9 +34,26 @@ COBOLコードをSpring Boot形式のJavaコードに変換する
      └─ Application.java 
     src.main.resources
      └─ mapper
+
 - DI：コンストラクタインジェクション
 - トランザクション：Service層に@Transactional付与
 - 例外処理：RuntimeExceptionベースで統一
+
+## 設定内容
+
+### persistence
+- type：利用する永続化方式（jpa / mybatis）
+- default：デフォルトはmybatis
+
+### batch_processing
+- enabled：バッチ処理を有効化
+- chunk_size：チャンクサイズ（可変）
+
+### dto_separation
+- enabled：DTO分離を有効化
+
+### naming_customization
+- enabled：命名カスタマイズを有効化
 
 ## ■ レイヤー構成
 - controller：API層

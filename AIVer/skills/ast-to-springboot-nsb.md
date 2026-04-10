@@ -38,12 +38,31 @@ COBOLコードをSpring Boot形式のJavaコードに変換する
 - トランザクション：Service層に@Transactional付与
 - 例外処理：RuntimeExceptionベースで統一
 
+## 設定内容
+### persistence
+- type：利用する永続化方式（jpa / mybatis）
+- default：デフォルトはmybatis
+### batch_processing
+- enabled：バッチ処理を有効化
+- chunk_size：チャンクサイズ（可変）
+### dto_separation
+- enabled：DTO分離を有効化
+### naming_customization
+- enabled：命名カスタマイズを有効化
+
 ## ■ レイヤー構成
 - controller：API層
 - service：業務ロジック
 - repository：DBアクセス
 - entity：データ構造
 - exception：例外処理
+
+## ■ 追加指示（高度）
+- 各クラス・メソッドに対して説明コメントを付与すること
+- 処理の意図・ロジックが分かるようにすること
+- 必要に応じて行単位コメントも追加すること
+- ビジネスロジックの意味も補足すること
+- 不明点があれば推測ではなく「不明」と明記すること
 
 ## ■ 命名規約
 - Entity：xxxEntity

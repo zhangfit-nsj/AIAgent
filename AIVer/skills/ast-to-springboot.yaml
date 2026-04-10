@@ -86,7 +86,8 @@ output:
     - include_package_declaration
     - include_imports
     - compilable_code_only
-    - no_explanations
+    #- no_explanations
+    - include_code_comments
 
 quality_rules:
   - null_check_required
@@ -141,6 +142,44 @@ usage:
 
     入力AST:
     {ast_json}
+
+comment_generation:
+  enabled: true
+
+  class_comment:
+    required: true
+    style: javadoc
+    content:
+      - purpose
+      - responsibilities
+
+  method_comment:
+    required: true
+    style: javadoc
+    content:
+      - description
+      - parameters
+      - return
+      - exceptions
+
+  inline_comment:
+    enabled: true
+    granularity: logical_block   # 行単位 or 処理単位
+    required_for:
+      - complex_logic
+      - condition
+      - loop
+      - external_call
+
+  business_comment:
+    enabled: true
+    include_domain_meaning: true
+
+comment_quality_rules:
+  - avoid_obvious_comments        # 「i++」にコメントしない
+  - explain_why_not_what          # 何をではなく、なぜを書く
+  - include_business_context      # 業務意味を含める
+  - consistent_language: japanese # 日本語 or 英語
 
 examples:
 

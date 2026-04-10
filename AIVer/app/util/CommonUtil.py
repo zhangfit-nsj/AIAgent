@@ -274,3 +274,87 @@ class CommonUtil:
     def load_file(file_path: str) -> str:
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
+        
+    @staticmethod
+    def split_java_classes_to_zip(content: str, output_root: str):
+        # --------------------------------
+        # importは全体から取得（共通）
+        # --------------------------------
+        imports = re.findall(r'import\s+[\w\.\*]+;', content)
+
+        # --------------------------------
+        # クラス開始検出
+        # --------------------------------
+        class_pattern = re.finditer(
+            r'(public\s+)?(class|interface|enum)\s+(\w+)',
+            content
+        )
+
+        class_list = []
+
+        print("Step2: クラス抽出")
+
+        for match in class_pattern:
+            class_name = match.group(3)
+            start_index = match.start()
+
+            # --------------------------------
+            # ★ 直前の package を取得
+            # --------------------------------
+            package_name = ""
+            before_text = content[:start_index]
+
+            package_matches = list(re.finditer(r'package\s+([\w\.]+);', before_text))
+            if package_matches:
+                package_name = package_matches[-1].group(1)
+
+            package_path = package_name.replace('.', os.sep) if package_name else ""
+
+            # --------------------------------
+            # { } の対応を取る
+            # --------------------------------
+            brace_count = 0
+            i = start_index
+            in_class = False
+
+            while i < len(content):
+                if content[i] == '{':
+                    brace_count += 1
+                    in_class = True
+                elif content[i] == '}':
+                    brace_count -= 1
+                    if in_class and brace_count == 0:
+                        end_index = i + 1
+                        class_text = content[start_index:end_index]
+                        class_list.append((class_name, class_text, package_name, package_path))
+                        break
+                i += 1
+
+        print(f"Step3: {len(class_list)} クラス検出")
+
+        # --------------------------------
+        # 出力処理
+        # --------------------------------
+        for class_name, class_body, package_name, package_path in class_list:
+
+            # ディレクトリ作成
+            output_dir = os.path.join(output_root, package_path)
+            os.makedirs(output_dir, exist_ok=True)
+
+            # ヘッダ作成
+            header = ""
+
+            if package_name:
+                header += f"package {package_name};\n\n"
+
+            if imports:
+                header += "\n".join(sorted(set(imports))) + "\n\n"
+
+            final_text = header + class_body
+
+            output_file = os.path.join(output_dir, f"{class_name}.java")
+
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(final_text)
+
+            print(f"出力: {output_file}")
