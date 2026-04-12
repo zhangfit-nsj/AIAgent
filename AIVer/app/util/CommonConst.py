@@ -15,6 +15,9 @@ class CommonConst:
 
     # S3のプレフィックス(Cobolソール)
     BUCKET_PREFIX = 'upload/'  # ← バケット直下のフォルダ
+    
+    #downloadフォルダーのプレフィックス
+    DOWNLOAD_BUCKET_PREFIX = 'download/'  # ← バケット直下のフォルダ
 
     #ASTファイルのプレフィックス
     AST_BUCKET_PREFIX = 'download/ast/'  # ← バケット直下のフォルダ
@@ -25,5 +28,11 @@ class CommonConst:
     #マークダウンファイルのプレフィックス
     MD_BUCKET_PREFIX = 'download/markdown/'  # ← バケット直下のフォルダ
 
+    #処理済のCobolファイル格納為のプレフィックス
+    COMPLETED_BUCKET_PREFIX = 'completed/'  # ← バケット直下のフォルダ
+
+    #skillファイルのプレフィックス
+    SKILL_BUCKET_PREFIX = 'skills/'  # ← バケット直下のフォルダ
+    
     #API KEY
     API_KEY = "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"

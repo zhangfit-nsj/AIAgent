@@ -2,6 +2,7 @@ import json
 import re
 import os
 import boto3
+import yaml
 from  app.util.CommonConst import CommonConst
 
 class CommonUtil:
@@ -392,3 +393,127 @@ class CommonUtil:
         except Exception as e:
             print(f"エラー: {e}")
             return {}
+
+    @staticmethod
+    def move_file(bucket_name, source_key, dest_key):
+        s3 = boto3.client('s3')
+        # コピー元情報
+        copy_source = {
+            'Bucket': bucket_name,
+            'Key': source_key
+        }
+
+        # ① コピー
+        s3.copy_object(
+            Bucket=bucket_name,
+            CopySource=copy_source,
+            Key=dest_key
+        )
+
+        # ② 元ファイル削除
+        s3.delete_object(
+            Bucket=bucket_name,
+            Key=source_key
+        )
+
+        print(f"Moved: {source_key} -> {dest_key}")
+
+    @staticmethod
+    def get_openai_api_key() -> str:
+        # AWS Secrets Managerクライアントの初期化
+        client = boto3.client("secretsmanager", region_name="ap-northeast-1")
+
+        # AWS Secrets ManagerからAPI KEYを取得すること。
+        response = client.get_secret_value(
+            SecretId="cobol2java/openai/api-key"
+        )
+
+        #AWS Secrets ManagerからAPI KEYを取得すること。
+        secret = json.loads(response["SecretString"])
+        #OpenAPIのAPI KEYを返すこと。
+        return secret["OPENAI_API_KEY"]
+    
+    @staticmethod
+    def copy_s3_folder(bucket_name, source_prefix, dest_prefix):
+        s3 = boto3.client('s3')
+        paginator = s3.get_paginator('list_objects_v2')
+
+        for page in paginator.paginate(Bucket=bucket_name, Prefix=source_prefix):
+            if 'Contents' not in page:
+                continue
+
+            for obj in page['Contents']:
+                source_key = obj['Key']
+
+                # フォルダ（サイズ0のキー）はスキップ（必要に応じて）
+                if source_key.endswith('/'):
+                    continue
+
+                # コピー先キー生成（構造維持）
+                dest_key = source_key.replace(source_prefix, dest_prefix, 1)
+
+                print(f"Copy: {source_key} -> {dest_key}")
+
+                s3.copy_object(
+                    Bucket=bucket_name,
+                    CopySource={'Bucket': bucket_name, 'Key': source_key},
+                    Key=dest_key
+                )
+
+    @staticmethod
+    def delete_files_keep_folders(bucket_name, prefix):
+        s3 = boto3.client('s3')
+        if not prefix.endswith('/'):
+            prefix += '/'
+
+        paginator = s3.get_paginator('list_objects_v2')
+
+        delete_keys = []
+
+        for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
+            if 'Contents' not in page:
+                continue
+
+            for obj in page['Contents']:
+                key = obj['Key']
+
+                # フォルダキーは削除しない（末尾が /）
+                if key.endswith('/'):
+                    print(f"Keep folder: {key}")
+                    continue
+
+                print(f"Delete file: {key}")
+                delete_keys.append({'Key': key})
+
+                # 1000件単位で削除
+                if len(delete_keys) == 1000:
+                    s3.delete_objects(
+                        Bucket=bucket_name,
+                        Delete={'Objects': delete_keys}
+                    )
+                    delete_keys = []
+
+        # 残り削除
+        if delete_keys:
+            s3.delete_objects(
+                Bucket=bucket_name,
+                Delete={'Objects': delete_keys}
+            )
+
+        print("Delete completed (folders kept)")
+    
+    @staticmethod
+    def get_skill(bucket_name, key):
+        # S3からSkillファイルを取得すること。skillは、ASTからJavaコードを生成するための要件定義（.mdや.yamlなど）を想定
+        # S3のハンドルを取得すること。
+        s3 = boto3.client("s3")
+        # S3からオブジェクト取得
+        response = s3.get_object(Bucket=bucket_name, Key=key)
+        # Bodyはバイナリなのでデコード
+        skill_content = response["Body"].read().decode("utf-8")
+        # ファイル形式に応じて、適切にパースすること。
+        if key.endswith('.yml'):
+            skill_content = yaml.safe_load(skill_content)
+
+        #パースした内容を返すこと。
+        return skill_content
