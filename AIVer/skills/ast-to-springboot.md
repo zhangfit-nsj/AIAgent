@@ -22,7 +22,7 @@ COBOLコードをSpring Boot形式のJavaコードに変換する
     - repository
     - entity
   package_structure: |
-    src.main.nsa.project
+    src.main.nsj.project
      ├─ controller
      ├─ service
      ├─ repository

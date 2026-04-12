@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import boto3
 from  app.util.CommonConst import CommonConst
 
 class CommonUtil:
@@ -358,3 +359,36 @@ class CommonUtil:
                 f.write(final_text)
 
             print(f"出力: {output_file}")
+
+    @staticmethod
+    def read_json_from_s3(bucket_name: str, key: str) -> dict:
+        try:
+            s3 = boto3.client("s3")
+
+            # S3からオブジェクト取得
+            response = s3.get_object(Bucket=bucket_name, Key=key)
+
+            # Bodyはバイナリなのでデコード
+            content = response["Body"].read().decode("utf-8")
+
+            ast = json.loads(content)
+
+            # 必須キー確認
+            required_keys = ["program_id", "variables", "procedures"]
+            for k in required_keys:
+                if k not in ast:
+                    raise ValueError(f"キー不足: {k}")
+
+            return ast
+
+        except s3.exceptions.NoSuchKey:
+            print(f"S3にファイルが存在しません: {key}")
+            return {}
+
+        except json.JSONDecodeError:
+            print("JSON形式が不正です")
+            return {}
+
+        except Exception as e:
+            print(f"エラー: {e}")
+            return {}

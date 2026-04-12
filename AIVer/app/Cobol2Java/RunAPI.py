@@ -3,6 +3,7 @@ import shutil
 
 from fastapi import FastAPI
 from fastapi import APIRouter
+from openai import api_key
 from app.Cobol2Java import CobolASTParser
 from app.Cobol2Java import CobolDocGenerator
 from app.Cobol2Java import LLMEnhancer
@@ -10,12 +11,14 @@ from app.Cobol2Java import MdToJavaGenerator
 from app.Cobol2Java import ASTToJavaGenerator
 from app.Cobol2Java import ASTToJavaGeneratorWithSkill
 from app.util.CommonUtil import CommonUtil
+from app.util.CommonConst import CommonConst
 
 import json
 import boto3
 import zipfile
 import os   
 import pandas as pd
+from datetime import datetime
 router = APIRouter()
 
 @router.get("/cobol2ast")
@@ -176,9 +179,9 @@ def generateJavaFromASTWithSkill():
     print(f"__name__ is", __name__)
     if __name__ == "app.Cobol2Java.RunAPI":
         s3 = boto3.client('s3')
-        bucket_name = 'cobol-to-java-migration'
-        prefix = 'upload/'  # ← バケット直下のフォルダ
-        generator = ASTToJavaGeneratorWithSkill.ASTToJavaGeneratorWithSkill("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")
+        bucket_name = CommonConst.BUCKET_NAME
+        prefix = CommonConst.BUCKET_PREFIX   # ← バケット直下のフォルダ
+        generator = ASTToJavaGeneratorWithSkill.ASTToJavaGeneratorWithSkill(CommonConst)
         skill = generator.load_file("c:/AIVer/skills/ast-to-springboot.yaml")
         # ファイル一覧取得
         response = s3.list_objects_v2(
@@ -233,17 +236,16 @@ def generateJavaFromASTWithSkill():
                 Body=java_code.encode('utf-8'),
                 ContentType='text/x-java-source'  # または 'text/plain'
             )
-            #java_file_path = "c:/AIVer/springboot/GeneratedJavaWithSkill.java"
 
-            #生成したJavaコードをローカルファイルに保存すること。
-            #CommonUtil.write_text_to_file(java_code, java_file_path)
+            #システム日時取得。
+            now = datetime.now()
+            formatted = now.strftime("%Y%m%d%H%M%S.%f")[:-3]
+
+            #生成したJavaソースの格納先を設定すること。
+            java_source_path = f"c:/AIVer/springboot/{formatted}"
 
             #上記生成したJavaファイルをクラス単位で分割し、生成すること。
-            CommonUtil.split_java_classes_to_zip(java_code, "c:/AIVer/springboot/")
-
-            #分割したJavaファイルをクラス単位で保存すること。
-            #with open(java_file_path, "r", encoding="utf-8") as f:
-            #    content = f.read()
+            CommonUtil.split_java_classes_to_zip(java_code, java_source_path)
 
             #JavaファイルからXMLブロックを抽出すること。
             xml_blocks = CommonUtil.extract_xml_blocks(java_code)
@@ -251,31 +253,21 @@ def generateJavaFromASTWithSkill():
             #XMLブロックが存在するか確認すること。
             if not xml_blocks:
                 print("⚠ XMLが見つかりません")
-                return
+            else:
+                #抽出したXMLブロックをファイルに保存すること。
+                CommonUtil.save_xml_files(xml_blocks, f"{java_source_path}/nsj/resources/mapper/")
             
-            #抽出したXMLブロックをファイルに保存すること。
-            CommonUtil.save_xml_files(xml_blocks, "c:/AIVer/springboot/nsj/resources/mapper/")
-
             # ① ローカルファイルをZIP圧縮
-            local_file_path = "c:/AIVer/springboot/"   
+            #local_file_path = "c:/AIVer/springboot/"   
             zip_file_folder = f"c:/AIVer/zip/"
             zip_file_path = f"{zip_file_folder}{key}.zip"
             s3_key = f"download/java/{key}.zip"
-            #with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            #    zipf.write(local_file_path, arcname=os.path.basename(local_file_path))
-            # ② S3へアップロード
-            #with open(zip_file_path, "rb") as f:
-            #    s3.put_object(
-            #        Bucket=bucket_name,
-            #        Key=s3_key,
-            #        Body=f,
-            #        ContentType='application/zip'
-            #    )
+
             with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for root, dirs, files in os.walk(local_file_path):
+                for root, dirs, files in os.walk(java_source_path):
                     for file in files:
                         full_path = os.path.join(root, file)
-                        arcname = os.path.relpath(full_path, local_file_path)
+                        arcname = os.path.relpath(full_path, java_source_path)
                         zipf.write(full_path, arcname)
 
             # ② S3へアップロード
@@ -288,14 +280,14 @@ def generateJavaFromASTWithSkill():
                 )
 
             #生成したソース＆ZIPファイルを削除すること。
-            folder_path = local_file_path + "nsj"
-            shutil.rmtree(folder_path)
+            shutil.rmtree(java_source_path)
             os.remove(zip_file_path)
 
         if 1==1 :
             #処理終了
             return f"Java(ASTより)生成正常終了-Skillあり-000"
         
+        #以降のソースを実施対象外とする。
         generator = ASTToJavaGeneratorWithSkill.ASTToJavaGeneratorWithSkill("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")
         #astファイルを生成すること
         #generateAST()
@@ -331,3 +323,272 @@ def generateJavaFromASTWithSkill():
         #print("step5")
         #処理終了
         return f"Java(ASTより)生成正常終了-Skillあり-000"
+
+##CobolコードからAST生成し、S3にアップロードすること。
+def generateASTWithCobol():
+    # =========================
+    # 実行例
+    # =========================
+    print("__name__", __name__)
+    if __name__ == "app.Cobol2Java.RunAPI":
+        #S3のハンドルを取得
+        s3 = boto3.client('s3')
+        #バッケト名
+        bucket_name = CommonConst.BUCKET_NAME
+        #バッケト直下のフォルダー名
+        prefix = CommonConst.BUCKET_PREFIX    # ← バケット直下のフォルダ
+        # ファイル一覧取得
+        response = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=prefix
+        )
+        # ファイル読み込み
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            
+            # フォルダ自身はスキップ
+            if key.endswith('/'):
+                continue
+
+            print(f"読み込み中: {key}")
+
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            content = file_obj['Body'].read().decode('utf-8')
+  
+            #CobolコードからAST生成
+            parser = CobolASTParser.CobolASTParser(content)
+            ast = parser.parse()
+
+            # AST内容を整形して表示すること。
+            ast_format = json.dumps(
+                ast,
+                ensure_ascii=False,
+                indent=2   # ★ ここを追加（インデント）
+            )
+
+            #AST内容をS3にアップロードすること。
+            # 'upload/' を除去
+            key = key[7:] # 'upload/' の文字数分をスライスして削除
+            s3_key = f"download/ast/{key}.json"
+            s3.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=ast_format.encode('utf-8')
+            )
+
+def generateTplWithAST():
+    # =========================
+    # 使用例
+    # =========================
+    print(f"__name__ is", __name__)
+    if __name__ == "app.Cobol2Java.RunAPI":
+        #S3のハンドルを取得
+        s3 = boto3.client('s3')
+        #バッケト名
+        bucket_name = CommonConst.BUCKET_NAME
+        #バッケト直下のフォルダー名
+        prefix = CommonConst.AST_BUCKET_PREFIX    # ← バケット直下のフォルダ
+        # ファイル一覧取得
+        response = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=prefix
+        )
+        # ファイル読み込み
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            
+            # フォルダ自身はスキップ
+            if key.endswith('/'):
+                continue
+
+            print(f"読み込み中: {key}")
+
+            #ASTファイルを読み取ること。
+            ast = CommonUtil.read_json_from_s3(bucket_name, key)
+  
+            #テンプレート生成ためのジェネレートクラスインスタンスを生成すること。
+            generator = CobolDocGenerator.CobolDocGenerator(ast)
+            #テンプレート内容を生成すること。
+            tpl_content = generator.generate()
+
+            # 'download/ast/' を除去
+            key = key[13:-5] # 'download/ast/' の文字数分をスライスして削除
+            #テンプレート内容をS3にアップロードすること。
+            s3_key = f"download/template/{key}.tpl"
+            s3.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=tpl_content.encode('utf-8')
+            )
+
+        #処理終了ークライアントへの返却値
+        return  f"テンプレート正常生成終了"
+
+def generateMdWithTpl():
+    # =========================
+    # 使用例
+    # =========================
+    print(f"__name__ is", __name__)
+    if __name__ == "app.Cobol2Java.RunAPI":
+        #S3のハンドルを取得
+        s3 = boto3.client('s3')
+        #バッケト名
+        bucket_name = CommonConst.BUCKET_NAME
+        #バッケト直下のフォルダー名
+        prefix = CommonConst.TPL_BUCKET_PREFIX    # ← バケット直下のフォルダ
+        # ファイル一覧取得
+        response = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=prefix
+        )
+        # ファイル読み込み
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            
+            # フォルダ自身はスキップ
+            if key.endswith('/'):
+                continue
+
+            print(f"読み込み中: {key}")
+
+            #テンプレートファイルを読み取ること。
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            tpl_content = file_obj['Body'].read().decode('utf-8')
+
+            #ASTファイルを読み取ること。
+            print(f"key={key}")
+            print(f"ASTファイルを読み取ること。key=download/ast/{key[18:-4]}.json")
+            ast_content = CommonUtil.read_json_from_s3(bucket_name, f"download/ast/{key[18:-4]}.json") 
+
+            #生成したテンプレート内容とAST内容をベースにマークダウンファイルを生成するためのAI自動生成クラスのインスタンスを生成すること。
+            enhancer = LLMEnhancer.LLMEnhancer(CommonConst.API_KEY)
+            #生成したテンプレート内容とAST内容をベースにマークダウンファイルを生成すること。
+            md_content = enhancer.enhanceMd(tpl_content, ast_content)
+  
+            # 'download/template/' を除去
+            key = key[18:-4] # 'download/template/' の文字数分をスライスして削除
+            #テンプレート内容をS3にアップロードすること。
+            s3_key = f"download/markdown/{key}.md"
+            s3.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=md_content.encode('utf-8')
+            )
+
+        #処理終了ークライアントへの返却値
+        return  f"マークダウンファイルを正常生成終了"
+
+def generateJavaWithMd():
+    # =========================
+    # 使用例
+    # =========================
+    print(f"__name__ is", __name__)
+    if __name__ == "app.Cobol2Java.RunAPI":
+        #S3のハンドルを取得
+        s3 = boto3.client('s3')
+        #バッケト名
+        bucket_name = CommonConst.BUCKET_NAME
+        #バッケト直下のフォルダー名
+        prefix = CommonConst.MD_BUCKET_PREFIX    # ← バケット直下のフォルダ
+        # ファイル一覧取得
+        response = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=prefix
+        )
+        # ファイル読み込み
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            
+            # フォルダ自身はスキップ
+            if key.endswith('/'):
+                continue
+
+            print(f"MD読み込み中: {key}")
+
+            #マークダウンファイルを読み取ること。
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            md_content = file_obj['Body'].read().decode('utf-8')
+            
+            #skillは、マークダウンファイルからJavaコードを生成するための要件定義（.mdや.yamlなど）を想定
+            skill = CommonUtil.load_file("c:/AIVer/skills/ast-to-springboot-nsb.md")
+
+            #生成したマークダウン内容をベースにJavaコードを生成するためのAI自動生成クラスのインスタンスを生成すること。
+            generator = MdToJavaGenerator.MdToJavaGenerator(CommonConst.API_KEY)
+            #生成したマークダウン内容をベースにJavaコードを生成すること。
+            java_code = generator.generate_java(skill, md_content)
+
+            #システム日時取得。
+            now = datetime.now()
+            formatted = now.strftime("%Y%m%d%H%M%S.%f")[:-3]
+
+            #生成したJavaソースの格納先を設定すること。
+            java_source_path = f"c:/AIVer/springboot/{formatted}/"
+            #ファイル分割
+            file_list = CommonUtil.split_java_classes_to_zip(java_code, java_source_path)
+
+            #JavaファイルからXMLブロックを抽出すること。
+            xml_blocks = CommonUtil.extract_xml_blocks(java_code)
+
+            #XMLブロックが存在するか確認すること。
+            if not xml_blocks:
+                print("⚠ XMLが見つかりません")
+            else:
+                #抽出したXMLブロックをファイルに保存すること。
+                CommonUtil.save_xml_files(xml_blocks, "c:/AIVer/springboot/nsj/resources/mapper/")
+            
+            # 'download/markdown/' を除去
+            key = key[18:-3] # 'download/markdown/' の文字数分をスライスして削除
+
+            # ① ローカルファイルをZIP圧縮
+            #local_file_path = "c:/AIVer/springboot/"   
+            zip_file_folder = f"c:/AIVer/zip/"
+            zip_file_path = f"{zip_file_folder}{key}.zip"
+            s3_key = f"download/java/{key}.zip"
+            print(f"JavaコードをZIP圧縮: {zip_file_path}")
+            with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(java_source_path):
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        arcname = os.path.relpath(full_path, java_source_path)
+                        zipf.write(full_path, arcname)
+
+            # ② S3へアップロード
+            with open(zip_file_path, "rb") as f:
+                s3.put_object(
+                    Bucket=bucket_name,
+                    Key=s3_key,
+                    Body=f,
+                    ContentType='application/zip'
+                )
+
+            #生成したソース＆ZIPファイルを削除すること。
+            folder_path = java_source_path
+            shutil.rmtree(folder_path)
+            os.remove(zip_file_path)
+
+        #処理終了ークライアントへの返却値
+        return  f"Javaファイルを正常生成終了"
+
+#自動生成ルールマップ：cobol->ast->java
+#skill(yml)を使用して、ASTからJavaコードを生成するAPI
+@router.get("/cobol2astN")
+def generateJavaFromAST():
+    # =========================
+    # 使用例
+    # =========================
+    print(f"__name__ is", __name__)
+    if __name__ == "app.Cobol2Java.RunAPI":
+        #ASTファイルを生成すること。
+        generateASTWithCobol()
+ 
+        #ASTファイルよりテンプレート内容を生成すること。
+        generateTplWithAST()
+
+        #生成したテンプレート内容&AST内容をベースにマークダウンファイルを生成すること。
+        generateMdWithTpl()
+
+        #生成したマークダウン内容をベースにJavaコードを生成すること。
+        generateJavaWithMd()
+
+        #処理終了
+        return f"生成正常終了-000"
